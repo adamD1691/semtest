@@ -1,0 +1,67 @@
+version: '3'
+
+services:
+    nginx:
+        build:
+            context: ./
+            dockerfile: ./docker-conf/nginx/Dockerfile
+        volumes:
+            - .:/var/www/html:delegated
+        working_dir: /var/www/html
+        ports:
+            - 8003:80
+        environment:
+            - VIRTUAL_HOST=semtest.localhost
+        networks:
+            - rekrut
+
+    php:
+        build:
+            context: ./
+            dockerfile: ./docker-conf/php/Dockerfile
+        working_dir: /var/www/html
+        expose:
+            - 9000
+        volumes:
+            - .:/var/www/html:delegated
+            - ~/.composer:/home/composer/.composer
+            - ./docker-conf/php/files/akeneo.ini:/usr/local/etc/php/conf.d/custom.ini
+        environment:
+            COMPOSER_HOME: '/home/composer/.composer'
+            PHP_XDEBUG_ENABLED: "${PHP_XDEBUG_ENABLED:-0}"
+            XDEBUG_CONFIG: 'remote_host=172.17.0.1'
+        networks:
+            - rekrut
+
+    mysql:
+        image: mysql:5.7
+        ports:
+            - '30069:3306'
+        volumes:
+            - dbdata:/var/lib/mysql
+            - .:/home/local:delegated
+        environment:
+            MYSQL_ROOT_PASSWORD: 'secret'
+            MYSQL_USER: 'root'
+            MYSQL_PASSWORD: 'semtest'
+            MYSQL_DATABASE: 'semtest'
+        networks:
+            - rekrut
+
+    nginx-proxy:
+        image: jwilder/nginx-proxy
+        ports:
+            - 80:80
+            - 443:443
+        volumes:
+            - /var/run/docker.sock:/tmp/docker.sock:ro
+        networks:
+            - rekrut
+
+
+networks:
+    rekrut:
+volumes:
+    dbdata:
+    php:
+
